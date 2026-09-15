@@ -199,12 +199,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .toast.ok{border-color:rgba(61,220,151,.4);color:var(--biz)}.toast.err{border-color:rgba(255,107,107,.4);color:var(--red)}
 @keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 .toast.out{animation:toastOut .25s forwards}@keyframes toastOut{to{opacity:0;transform:translateY(20px)}}
+
+/* v2.2 — notes + development log */
+.page-note{border-color:rgba(255,179,71,.18);background:linear-gradient(135deg,rgba(255,179,71,.045),rgba(167,139,250,.025))}
+.page-note textarea{min-height:110px}
+.quick-notes{position:fixed;top:74px;left:24px;z-index:950;width:min(390px,calc(100vw - 32px));background:var(--panel-solid);border:1px solid var(--line-2);border-radius:14px;padding:16px;box-shadow:var(--shadow-lg);display:none}
+.quick-notes.show{display:block;animation:fadeUp .2s both}
+.quick-notes-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.quick-notes textarea{min-height:150px}
+.dev-entry{display:grid;grid-template-columns:120px 1fr 130px auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.dev-entry:last-child{border-bottom:0}
+.dev-date{font-family:var(--mono);font-size:11px;color:var(--dim);padding-top:9px}
+.dev-title{font-weight:600;margin-bottom:4px}.dev-note{font-size:12px;color:var(--mut);white-space:pre-wrap}
+.dev-status{width:130px;padding:7px 8px;font-size:12px}
+@media(max-width:820px){.quick-notes{top:68px;left:16px;right:16px;width:auto}.dev-entry{grid-template-columns:1fr}.dev-date{padding-top:0}.dev-status{width:100%}}
+
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="side" id="side">
-    <div class="brand"><div class="logo">N</div><div><div class="n">NAIF OS</div><div class="s">v2.1 · offline</div></div></div>
+    <div class="brand"><div class="logo">N</div><div><div class="n">NAIF OS</div><div class="s">v2.2 · notes + dev log</div></div></div>
     <div id="nav"></div>
   </aside>
   <main class="main">
@@ -214,6 +229,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="spacer"></div>
       <div class="quick-stat hide-m" title="Streak"><span class="ico">🔥</span><span class="v" id="streak">0</span></div>
       <div class="quick-stat hide-m" title="ساعات هذا الأسبوع"><span class="ico">⏱</span><span class="v" id="wk-hours">0h</span></div>
+      <div class="cmd-trigger" onclick="toggleQuickNotes()" title="ملاحظة عامة"><span>📝</span><span class="hide-m">Notes</span></div>
       <div class="cmd-trigger" onclick="openCmdk()"><span>⌕</span><span class="hide-m">Search</span><kbd>Ctrl K</kbd></div>
       <div class="exam-toggle" id="examToggle" onclick="toggleExam()"><div class="sw"></div><span id="examLbl">Exam</span></div>
     </div>
@@ -234,14 +250,19 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="focus-time" id="focus-time">25:00</div>
   <div class="focus-btns"><button class="btn sm pri" id="focus-btn" onclick="toggleFocusTimer()">Start</button><button class="btn sm" onclick="resetFocus()">Reset</button></div>
 </div>
+<div class="quick-notes" id="quick-notes">
+  <div class="quick-notes-h"><div><b>📝 ملاحظة عامة</b><div class="small dim">تظهر لك من أي صفحة — تحفظ تلقائياً</div></div><button class="x" style="opacity:1" onclick="toggleQuickNotes(false)">×</button></div>
+  <textarea id="global-note" placeholder="اكتب أي ملاحظة مؤقتة، تعديل، فكرة أو شيء نرجع له…" oninput="saveGlobalNote(this.value)"></textarea>
+  <div class="small dim mt-2">ملاحظة كل صفحة موجودة أيضاً أسفل الصفحة نفسها.</div>
+</div>
 <div class="toasts" id="toasts"></div>
 <script>
-/* ================= NAIF OS v2.1 — single file · offline · localStorage ================= */
+/* ================= NAIF OS v2.2 — development log + notes · offline · localStorage ================= */
 const KEY='naif_os';                                   // unified key
 const MIGRATE=['naif_os_v2','naif_os_v1_1','naif_os_v1']; // pull data from any older version
 
 const DEFAULT_STATE={
-  meta:{examMode:false,version:"2.1",streak:0,lastActive:"",focusMinutes:25},
+  meta:{examMode:false,version:"2.2",streak:0,lastActive:"",focusMinutes:25},
   today:{
     must:[{t:"مراجعة ENG103 — مصطلحات الحاسب",d:0},{t:"Linux Lab — SSH + Permissions",d:0},{t:"اختبار Smart AC — Pair + ON/OFF",d:0}],
     should:[{t:"تسجيل ملاحظات Linux",d:0}],
@@ -305,11 +326,21 @@ const DEFAULT_STATE={
     kpi:{views:0,cart:0,orders:0,revenue:0,cost:0,returns:0,digital:0,consults:0,installs:0,payingCustomers:0,targetPayingCustomers:1}
   },
   ceo:{uniDone:"",uniRisk:"",uniNext:"",carHours:"",carBuilt:"",carNext:"",bizOrders:"",bizRevenue:"",bizFeedback:"",bizProblem:"",decision:""},
+  development:{
+    current:"ربط NAIF OS للعمل من أي مكان — GitHub + Cloud Sync",
+    stage:"In Progress",
+    entries:[
+      {id:"dev1",date:"2026-09-15",area:"GitHub",title:"تجهيز مستودع NAIF-OS ورفع نسخة الدسكتوب",status:"Done",note:"index.html على GitHub والفرع main مرتبط بالدسكتوب."},
+      {id:"dev2",date:"2026-09-15",area:"Cloud Sync",title:"مزامنة البيانات بين الدسكتوب واللابتوب والجوال",status:"In Progress",note:"Node.js اشتغل؛ نكمل Firebase/التخزين السحابي بعد تحديث الصفحة."}
+    ]
+  },
+  notes:{global:"",pages:{}},
   activity:{}
 };
 
 /* ---- state + storage (unified + migrate) ---- */
 let S=load();
+S.meta.version="2.2";
 function load(){
   try{
     const main=localStorage.getItem(KEY);
@@ -366,9 +397,9 @@ const NAV=[
   {lbl:"Core",items:[{id:"dashboard",ic:"◈",name:"Dashboard"},{id:"today",ic:"☀",name:"Today"},{id:"calendar",ic:"▦",name:"Calendar"},{id:"weekly",ic:"▤",name:"Weekly Review"}]},
   {lbl:"Priorities",items:[{id:"university",ic:"◆",name:"University",dot:"var(--uni)"},{id:"career",ic:"◆",name:"Career",dot:"var(--car)"},{id:"business",ic:"◆",name:"Business",dot:"var(--biz)"}]},
   {lbl:"Business",items:[{id:"ac",ic:"❄",name:"Smart AC",sub:1},{id:"plug",ic:"⏻",name:"Smart Plug",sub:1},{id:"digital",ic:"⬡",name:"Digital Products",sub:1},{id:"consulting",ic:"☎",name:"Consulting",sub:1},{id:"content",ic:"▶",name:"Content",sub:1},{id:"experiments",ic:"⚗",name:"Experiments",sub:1}]},
-  {lbl:"System",items:[{id:"handoff",ic:"⇪",name:"AI Handoff"},{id:"settings",ic:"⚙",name:"Settings"}]}
+  {lbl:"System",items:[{id:"development",ic:"🛠",name:"تطوير NAIF OS"},{id:"handoff",ic:"⇪",name:"AI Handoff"},{id:"settings",ic:"⚙",name:"Settings"}]}
 ];
-const TITLES={dashboard:"Dashboard",today:"Today",calendar:"التقويم الأكاديمي",weekly:"Weekly CEO Review",university:"University",career:"Career Track",business:"Business",ac:"Smart AC — Project",plug:"Smart Plug — Project",digital:"Digital Products",consulting:"Consulting",content:"Content System",experiments:"Experiment Log",handoff:"AI Handoff",settings:"Settings"};
+const TITLES={dashboard:"Dashboard",today:"Today",calendar:"التقويم الأكاديمي",weekly:"Weekly CEO Review",university:"University",career:"Career Track",business:"Business",ac:"Smart AC — Project",plug:"Smart Plug — Project",digital:"Digital Products",consulting:"Consulting",content:"Content System",experiments:"Experiment Log",development:"تطوير NAIF OS",handoff:"AI Handoff",settings:"Settings"};
 function viewFromHash(){
   const id=(location.hash||'').replace(/^#\/?/,'').trim();
   return TITLES[id]?id:'dashboard';
@@ -411,7 +442,12 @@ function taskList(items,onToggle,onDel,showMeta,onFocus){
 function ringSVG(pct,color){const r=30,c=2*Math.PI*r,off=c-(pct/100)*c;const col=color==='uni'?'#ffb347':color==='biz'?'#3ddc97':'#4dc9ff';return `<div class="ring"><svg width="70" height="70" viewBox="0 0 70 70"><circle class="bgc" cx="35" cy="35" r="${r}"/><circle class="fgc" cx="35" cy="35" r="${r}" stroke="${col}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/></svg><div class="rn">${Math.round(pct)}%</div></div>`}
 
 /* ================= VIEWS ================= */
-function render(){$('#view-title').textContent=TITLES[cur]||'NAIF OS';$('#view').innerHTML=(VIEWS[cur]||(()=>`<div class="panel">—</div>`))();renderChrome()}
+function pageNoteBlock(){
+  if(!S.notes)S.notes={global:'',pages:{}};if(!S.notes.pages)S.notes.pages={};
+  const v=S.notes.pages[cur]||'';
+  return `<div class="panel page-note mt-4"><h3 class="card-t">📝 ملاحظات هذه الصفحة <span class="badge warn" style="margin-right:auto">AUTO SAVE</span></h3><textarea placeholder="سجل تعديل تبيه، فكرة، شيء ناقص، أو ملاحظة نرجع لها لاحقاً…" oninput="savePageNote(this.value)">${esc(v)}</textarea><div class="small dim mt-2">تبقى محفوظة مع بيانات NAIF OS، ولما نفعل Cloud Sync بتنتقل معك لكل الأجهزة.</div></div>`;
+}
+function render(){$('#view-title').textContent=TITLES[cur]||'NAIF OS';const body=(VIEWS[cur]||(()=>`<div class="panel">—</div>`))();$('#view').innerHTML=body+pageNoteBlock();renderChrome()}
 const VIEWS={};
 
 VIEWS.dashboard=()=>{
@@ -593,6 +629,18 @@ VIEWS.experiments=()=>{
   <div class="panel"><h3 class="card-t">＋ New experiment</h3><div class="addrow" style="flex-wrap:wrap"><input id="ex-hyp" placeholder="Hypothesis" style="flex:1;min-width:220px"><input id="ex-test" placeholder="Test" style="flex:1;min-width:140px"><input id="ex-metric" placeholder="Metric" style="width:110px"><input id="ex-target" placeholder="Target" style="width:90px"><button class="btn pri sm" onclick="addExp()">Add</button></div></div>`;
 };
 
+VIEWS.development=()=>{
+  const d=S.development||{current:'',stage:'In Progress',entries:[]};
+  const items=(d.entries||[]).map((e,i)=>({e,i})).reverse();
+  const statuses=['Idea','Planned','In Progress','Testing','Done','Paused'];
+  return `<div class="grid g2">
+    <div class="panel pillar car"><h3 class="card-t">🛠 وش قاعدين نسوي الآن؟</h3><span class="field-lbl">Current work</span><input value="${esc(d.current||'')}" placeholder="المهمة الحالية…" onchange="set('development.current',this.value)"><span class="field-lbl">Status</span><select onchange="set('development.stage',this.value);render()">${statuses.map(x=>`<option ${d.stage===x?'selected':''}>${x}</option>`).join('')}</select><div class="note">هذه الصفحة هي سجل تطوير NAIF OS نفسها: كل تعديل نسويه، وش خلص، وش باقي، وليش غيرناه.</div></div>
+    <div class="panel"><h3 class="card-t">＋ سجل تحديث جديد</h3><div class="grid g2"><div><span class="field-lbl">Area</span><input id="dev-area" placeholder="مثال: Sync / University / UI"></div><div><span class="field-lbl">Status</span><select id="dev-status">${statuses.map(x=>`<option ${x==='In Progress'?'selected':''}>${x}</option>`).join('')}</select></div></div><span class="field-lbl">What changed / what are we doing?</span><input id="dev-title" placeholder="عنوان مختصر"><span class="field-lbl">Notes</span><textarea id="dev-note" placeholder="وش سوينا؟ وش باقي؟ أي مشكلة أو قرار؟"></textarea><button class="btn pri" onclick="addDevEntry()">＋ أضف للسجل</button></div>
+  </div>
+  <h2 class="sec"><span class="bar"></span>سجل التطوير</h2>
+  <div class="panel pad0"><div style="padding:5px 18px">${items.length?items.map(({e,i})=>`<div class="dev-entry"><div class="dev-date">${esc(e.date||'')}</div><div><div class="dev-title">${esc(e.title||'—')}</div><div class="small" style="color:var(--car)">${esc(e.area||'General')}</div>${e.note?`<div class="dev-note mt-2">${esc(e.note)}</div>`:''}</div><select class="dev-status" onchange="set('development.entries.${i}.status',this.value);render()">${statuses.map(x=>`<option ${e.status===x?'selected':''}>${x}</option>`).join('')}</select><button class="x" style="opacity:1;padding-top:8px" onclick="delDevEntry(${i})">×</button></div>`).join(''):`<div class="empty" style="margin:16px">ما فيه تحديثات مسجلة.</div>`}</div></div>`;
+};
+
 VIEWS.handoff=()=>{
   const txt=buildHandoff();
   return `<div class="note" style="margin-bottom:16px">📋 هذا ملخّص نصّي كامل لحالتك الحالية من داخل الموقع. اضغط <b>Copy</b> والصقه في ChatGPT أو Claude — يعرف بالضبط وين وقفت بدون ما تعيد الشرح. حدّثه بالزر بعد أي تغيير.</div>
@@ -610,7 +658,7 @@ VIEWS.handoff=()=>{
 VIEWS.settings=()=>`<div class="grid g2">
   <div class="panel"><h3 class="card-t">⏱ Time budget</h3>${inp('Career weekly target (h)','budget.car.target',S.budget.car.target,'7')}${inp('Business weekly target (h)','budget.biz.target',S.budget.biz.target,'4')}<span class="field-lbl">Hours logged this week</span><div class="grid g3"><div>${inp('University','budget.uni.done',S.budget.uni.done,'0')}</div><div>${inp('Career','budget.car.done',S.budget.car.done,'0')}</div><div>${inp('Business','budget.biz.done',S.budget.biz.done,'0')}</div></div>
   <span class="field-lbl">تواريخ الفصل (لحساب تقدّم الجامعة)</span><div class="grid g2"><div>${inp('بداية الفصل','calendar.termStart',S.calendar.termStart,'')}</div><div>${inp('نهاية الفصل','calendar.termEnd',S.calendar.termEnd,'')}</div></div></div>
-  <div class="panel"><h3 class="card-t">💾 البيانات</h3><div class="dim small">محفوظة داخل هذا المتصفح فقط. للنسخ الاحتياطي أو النقل صدّرها. مفتاح موحّد يقرأ من كل النسخ السابقة.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn pri" onclick="go('handoff')">⇪ AI Handoff</button><button class="btn" onclick="exportData()">⬇ Export JSON</button><button class="btn" onclick="document.getElementById('imp').click()">⬆ Import JSON</button><input type="file" id="imp" accept=".json" style="display:none" onchange="importData(this)"><button class="btn" style="border-color:rgba(255,107,107,.3);color:var(--red)" onclick="resetData()">↺ Reset</button></div><h3 class="card-t" style="margin-top:20px">ℹ About</h3><div class="small dim">NAIF OS v2.1 · single-file · offline · لا backend. University → Career → Business. Baseline V3.1 ثابت.</div></div>
+  <div class="panel"><h3 class="card-t">💾 البيانات</h3><div class="dim small">محفوظة داخل هذا المتصفح فقط. للنسخ الاحتياطي أو النقل صدّرها. مفتاح موحّد يقرأ من كل النسخ السابقة.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn pri" onclick="go('handoff')">⇪ AI Handoff</button><button class="btn" onclick="exportData()">⬇ Export JSON</button><button class="btn" onclick="document.getElementById('imp').click()">⬆ Import JSON</button><input type="file" id="imp" accept=".json" style="display:none" onchange="importData(this)"><button class="btn" style="border-color:rgba(255,107,107,.3);color:var(--red)" onclick="resetData()">↺ Reset</button></div><h3 class="card-t" style="margin-top:20px">ℹ About</h3><div class="small dim">NAIF OS v2.2 · development log + page notes · single-file · offline حالياً. University → Career → Business. Baseline V3.1 ثابت.</div></div>
 </div>`;
 
 /* ---- helpers ---- */
@@ -649,6 +697,12 @@ window.delContent=(k,i)=>{S.business.content[k].splice(i,1);save();render()};
 window.addExp=()=>{const h=$('#ex-hyp').value;if(!h)return;S.business.experiments.push({hyp:h,test:$('#ex-test').value,metric:$('#ex-metric').value,target:$('#ex-target').value,actual:'',learning:'',decision:'',date:todayKey()});save();render();toast('تمت الإضافة','ok')};
 window.addCalEvent=()=>{const t=$('#ce-title').value.trim(),d=$('#ce-date').value,ty=$('#ce-type').value;if(!t||!d){toast('اكتب العنوان والتاريخ','err');return}S.calendar.events.push({id:uid(),title:t,date:d,type:ty,ref:false});save();render();toast('تمت الإضافة للتقويم','ok')};
 window.delCalEvent=id=>{S.calendar.events=S.calendar.events.filter(e=>e.id!==id);save();render()};
+window.savePageNote=v=>{if(!S.notes)S.notes={global:'',pages:{}};if(!S.notes.pages)S.notes.pages={};S.notes.pages[cur]=v;save()};
+window.saveGlobalNote=v=>{if(!S.notes)S.notes={global:'',pages:{}};S.notes.global=v;save()};
+window.toggleQuickNotes=(force)=>{const el=$('#quick-notes');const show=typeof force==='boolean'?force:!el.classList.contains('show');el.classList.toggle('show',show);if(show){$('#global-note').value=(S.notes&&S.notes.global)||'';setTimeout(()=>$('#global-note').focus(),30)}};
+window.addDevEntry=()=>{const title=$('#dev-title')?.value.trim();if(!title){toast('اكتب عنوان التحديث','err');return}if(!S.development)S.development={current:'',stage:'In Progress',entries:[]};S.development.entries.push({id:uid(),date:todayKey(),area:$('#dev-area')?.value.trim()||'General',title,status:$('#dev-status')?.value||'In Progress',note:$('#dev-note')?.value.trim()||''});S.development.current=title;S.development.stage=$('#dev-status')?.value||'In Progress';save();render();toast('تم تسجيل التحديث','ok')};
+window.delDevEntry=i=>{if(S.development?.entries){S.development.entries.splice(i,1);save();render()}};
+
 /* ---- AI HANDOFF (readable text snapshot) ---- */
 function buildHandoff(){
   const u=S.university,c=S.career,b=S.business,ceo=S.ceo,cal=S.calendar;
@@ -716,6 +770,14 @@ function buildHandoff(){
   line('Business — orders/rev: '+(ceo.bizOrders||'—')+' | feedback: '+(ceo.bizFeedback||'—')+' | problem: '+(ceo.bizProblem||'—'));
   line('ONE DECISION next week: '+(ceo.decision||'not set'));
   hr();
+
+  line('## NAIF OS DEVELOPMENT');
+  line('current: '+(S.development?.current||'—')+' | status: '+(S.development?.stage||'—'));
+  (S.development?.entries||[]).slice(-8).forEach(e=>line('  - '+(e.date||'')+' ['+(e.status||'')+'] '+(e.area||'General')+' — '+(e.title||'')+(e.note?' | '+e.note:'')));
+  if(S.notes?.global)line('global note: '+S.notes.global);
+  const pageNotes=Object.entries(S.notes?.pages||{}).filter(([,v])=>String(v).trim());
+  if(pageNotes.length){line('page notes:');pageNotes.forEach(([k,v])=>line('  - '+k+': '+v))}
+  hr();
   line('END OF HANDOFF — paste to ChatGPT/Claude to continue from this exact state.');
   return L.join('\n');
 }
@@ -730,7 +792,7 @@ window.resetData=()=>{if(confirm('سيتم مسح كل بياناتك. متأك�
 
 /* ---- command palette ---- */
 let cmdkOn=false,cmdkSel=0,cmdkItems=[];
-function buildCmdk(){const items=[['◈','Dashboard','Page','dashboard'],['☀','Today','Page','today'],['▦','Calendar','Page','calendar'],['▤','Weekly Review','Page','weekly'],['◆','University','Page','university'],['◆','Career','Page','career'],['◆','Business','Page','business'],['❄','Smart AC','Page','ac'],['⏻','Smart Plug','Page','plug'],['⬡','Digital Products','Page','digital'],['☎','Consulting','Page','consulting'],['▶','Content','Page','content'],['⚗','Experiments','Page','experiments'],['⚙','Settings','Page','settings']].map(([ic,name,cat,id])=>({ic,name,cat,run:()=>go(id)}));
+function buildCmdk(){const items=[['◈','Dashboard','Page','dashboard'],['☀','Today','Page','today'],['▦','Calendar','Page','calendar'],['▤','Weekly Review','Page','weekly'],['◆','University','Page','university'],['◆','Career','Page','career'],['◆','Business','Page','business'],['❄','Smart AC','Page','ac'],['⏻','Smart Plug','Page','plug'],['⬡','Digital Products','Page','digital'],['☎','Consulting','Page','consulting'],['▶','Content','Page','content'],['⚗','Experiments','Page','experiments'],['🛠','تطوير NAIF OS','Page','development'],['⚙','Settings','Page','settings']].map(([ic,name,cat,id])=>({ic,name,cat,run:()=>go(id)}));
   items.push({ic:'⇪',name:'AI Handoff — copy state',cat:'Action',run:()=>{go('handoff');setTimeout(copyHandoff,60)}},{ic:'⏱',name:'Start Focus Session',cat:'Action',run:()=>startFocus('Focus')},{ic:'⚠',name:'Toggle Exam Mode',cat:'Action',run:()=>toggleExam()},{ic:'⬇',name:'Export Data',cat:'Action',run:()=>exportData()});
   ['must','should','backlog'].forEach(k=>S.today[k].filter(t=>!t.d).forEach(t=>items.push({ic:'☐',name:t.t,cat:'Task',run:()=>go('today')})));
   S.university.courses.forEach(c=>items.push({ic:'◆',name:`${c.code} — ${c.name}`,cat:'Course',run:()=>go('university')}));
